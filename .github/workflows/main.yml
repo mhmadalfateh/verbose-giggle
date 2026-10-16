@@ -1,0 +1,67 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # تحميل ملفات GitHub
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # فك ضغط ملف ZIP
+      - name: Extract ZIP
+        run: |
+          unzip -o mawad-manager-github.zip -d extracted
+          ls -la extracted
+          ls -la extracted/mawad-manager
+
+      # الدخول إلى المشروع
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # تثبيت Java
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # تثبيت Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # تثبيت npm
+      - name: Install npm packages
+        working-directory: extracted/mawad-manager
+        run: npm install
+
+      # إنشاء مشروع Android
+      - name: Add Android
+        working-directory: extracted/mawad-manager
+        run: npx cap add android
+
+      # مزامنة التطبيق
+      - name: Sync Capacitor
+        working-directory: extracted/mawad-manager
+        run: npx cap sync android
+
+      # بناء APK
+      - name: Build APK
+        working-directory: extracted/mawad-manager/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # إخراج APK
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mawad-manager-apk
+          path: extracted/mawad-manager/android/app/build/outputs/apk/debug/app-debug.apk
